@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
+  <link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#7A8F32">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NUVOZ | App SAAC</title>
@@ -13,7 +16,12 @@
     <link rel="stylesheet" href="style.css" />
     <script src="script.js" defer></script>
   </head>
-  <body class="app-bg">
+  <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("./service-worker.js");
+  }
+</script>
+<body class="app-bg">
     <div class="splash-screen" id="splashScreen">
       <img src="img/logo.png" alt="Logotipo de NUVOZ" class="splash-logo" />
       <h1 class="splash-title"><span class="brand-nu">NU</span><span class="brand-voz">VOZ</span></h1>
