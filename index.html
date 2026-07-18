@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NUVOZ | App SAAC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="script.js" defer></script>
+  </head>
+  <body class="app-bg">
+    <div class="splash-screen" id="splashScreen">
+      <img src="img/logo.png" alt="Logotipo de NUVOZ" class="splash-logo" />
+      <h1 class="splash-title"><span class="brand-nu">NU</span><span class="brand-voz">VOZ</span></h1>
+      <p class="splash-tagline" id="splashTagline">comunicación que te conecta</p>
+      <img src="img/mascota.png" alt="Mascota de NUVOZ" class="splash-mascot" />
+    </div>
+
+    <main class="app-shell">
+      <div class="left-column">
+        <div class="brand-row">
+          <div class="logo-box">
+            <img src="img/logo.png" alt="Logotipo de NUVOZ" class="app-logo" />
+          </div>
+          <div class="name-box">
+            <p class="brand-box-name"><span class="brand-nu">NU</span><span class="brand-voz">VOZ</span></p>
+          </div>
+          <button type="button" class="lang-toggle" id="langToggle" aria-label="Euskarara aldatu">EU</button>
+        </div>
+
+        <section class="message-panel">
+          <h2 id="messageTitle">Mi mensaje</h2>
+          <img src="img/mascota.png" alt="Mascota de NUVOZ" class="mascot" id="mascotImg" />
+          <div class="message-box" id="messageBox" aria-live="polite">
+            Selecciona palabras para construir tu mensaje...
+          </div>
+          <div class="message-actions">
+            <button type="button" class="btn-secondary" id="clearMessage">
+              Borrar mensaje
+            </button>
+            <button type="button" class="btn-primary" id="speakMessage">
+              Reproducir voz
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <section class="grid-panel">
+        <div class="panel-head">
+          <h2 id="gridTitle">Categorías</h2>
+          <button type="button" class="btn-secondary" id="backToCategories" hidden>
+            Volver
+          </button>
+        </div>
+
+        <div class="app-grid" id="appGrid">
+          <button type="button" class="tile-btn category" data-category="Personas">👤<span>Personas</span></button>
+          <button type="button" class="tile-btn category" data-category="Comida">🍎<span>Comida</span></button>
+          <button type="button" class="tile-btn category" data-category="Lugares">📍<span>Lugares</span></button>
+          <button type="button" class="tile-btn category" data-category="Actividades">⚽<span>Actividades</span></button>
+          <button type="button" class="tile-btn category" data-category="Sentimientos">😊<span>Sentimientos</span></button>
+          <button type="button" class="tile-btn category" data-category="Frases">💬<span>Frases</span></button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
