@@ -150,10 +150,38 @@ const wordImages = {
     Leche: "Leche.png",
     Arroz: "Arroz.png",
   },
-  Lugares: {},
-  Actividades: {},
-  Sentimientos: {},
-  Frases: {},
+  Lugares: {
+    Casa: "Casa.png",
+    Colegio: "Colegio.png",
+    Parque: "Parque.png",
+    Baño: "Baño.png",
+    Hospital: "Hospital.png",
+    Tienda: "Tienda.png",
+  },
+  Actividades: {
+    Jugar: "Jugar.png",
+    Comer: "Comer.png",
+    Beber: "Beber.png",
+    Leer: "Leer.png",
+    Caminar: "Caminar.png",
+    Dormir: "Dormir.png",
+  },
+  Sentimientos: {
+    Contento: "Contento.png",
+    Triste: "Triste.png",
+    Cansado: "Cansado_.png",
+    Enfadado: "Enfadado.png",
+    Asustado: "Asustado.png",
+    Calma: "Calma.png",
+  },
+  Frases: {
+    "Quiero agua": "Quiero_agua.png",
+    "Necesito ayuda": "Necesito_ayuda.png",
+    "Vamos al baño": "Vamos_al_baño.png",
+    "Tengo hambre": "Tengo_hambre.png",
+    Gracias: "Gracias.png",
+    Hola: "Hola.png",
+  },
 };
 
 // Devuelve el HTML del icono de una palabra: su pictograma si ya existe, o nada.
@@ -198,12 +226,13 @@ const subjectDataByLang = {
 
 const placePhrasesByLang = {
   es: {
+    // "en el/la X": el sujeto ESTÁ en ese lugar (no "al X", que sería ir hacia allí).
     Casa: "en casa",
-    Colegio: "al colegio",
-    Parque: "al parque",
-    Baño: "al baño",
-    Hospital: "al hospital",
-    Tienda: "a la tienda",
+    Colegio: "en el colegio",
+    Parque: "en el parque",
+    Baño: "en el baño",
+    Hospital: "en el hospital",
+    Tienda: "en la tienda",
   },
   eu: {
     Casa: "etxean",
@@ -333,13 +362,20 @@ function buildDactyloRowHtml(word) {
     .join("");
 }
 
+// Límite de palabras por mensaje (es un prototipo): al superarlo se borra solo.
+const MAX_MESSAGE_WORDS = 5;
+
 // Estado actual de la frase construida (siempre guarda los identificadores en español).
 const messageState = {
   phrase: "",
   subject: "",
   activity: "",
-  complement: "",
-  complementType: "",
+  // Comida, lugar y sentimiento se guardan por separado (en vez de un único
+  // "complemento") para poder combinarlos todos en la misma frase con "y"
+  // en lugar de que el último elegido borre a los anteriores.
+  food: "",
+  place: "",
+  feeling: "",
   // Historial visual para mostrar feedback inmediato al pulsar cualquier palabra.
   selectedWords: [],
 };
@@ -580,8 +616,9 @@ function handleWordSelection(word, categoryType) {
     messageState.phrase = word;
     messageState.subject = "";
     messageState.activity = "";
-    messageState.complement = "";
-    messageState.complementType = "";
+    messageState.food = "";
+    messageState.place = "";
+    messageState.feeling = "";
     updateMessageBox();
     return;
   }
@@ -592,13 +629,14 @@ function handleWordSelection(word, categoryType) {
   }
   messageState.phrase = "";
 
+  // Prototipo: como máximo 5 palabras por mensaje. Al llegar al límite,
+  // el mensaje se borra solo para empezar uno nuevo con la palabra actual.
+  if (messageState.selectedWords.length >= MAX_MESSAGE_WORDS) {
+    resetMessageState();
+  }
+
   // Siempre guardamos feedback inmediato, sea cual sea la categoría.
   messageState.selectedWords.push(word);
-
-  // Evita que la lista visual crezca sin límite.
-  if (messageState.selectedWords.length > 10) {
-    messageState.selectedWords = messageState.selectedWords.slice(-10);
-  }
 
   if (categoryType === "Personas") {
     messageState.subject = word;
@@ -612,112 +650,106 @@ function handleWordSelection(word, categoryType) {
     return;
   }
 
-  if (categoryType === "Comida" || categoryType === "Lugares" || categoryType === "Sentimientos") {
-    messageState.complement = word;
-    messageState.complementType = categoryType;
+  if (categoryType === "Comida") {
+    messageState.food = word;
+    updateMessageBox();
+    return;
+  }
+
+  if (categoryType === "Lugares") {
+    messageState.place = word;
+    updateMessageBox();
+    return;
+  }
+
+  if (categoryType === "Sentimientos") {
+    messageState.feeling = word;
     updateMessageBox();
   }
 }
 
+// Da formato a la comida elegida ("agua" / "ura").
+function formatFoodPhrase(foodWord) {
+  return getLabel(wordLabels, foodWord).toLowerCase();
+}
+
+// Da formato al lugar elegido con su preposición ("en casa" / "etxean").
+function formatPlacePhrase(placeWord) {
+  const table = placePhrasesByLang[currentLang];
+  return (table && table[placeWord]) || getLabel(wordLabels, placeWord).toLowerCase();
+}
+
+// Da formato al sentimiento elegido, con la concordancia de género en español.
+function formatFeelingPhrase(feelingWord, gender) {
+  const table = sentimentByGenderLang[currentLang];
+  const entry = table[feelingWord];
+  return entry ? entry[gender] : getLabel(wordLabels, feelingWord).toLowerCase();
+}
+
 // Genera la frase final con reglas simples y naturales, en el idioma activo.
+// Comida, lugar y sentimiento pueden elegirse a la vez: en vez de que el
+// último pisar a los anteriores, cada uno forma su propia frase corta y se
+// unen con "y" ("eta" en euskera) para no perder ninguna selección.
 function getFinalMessage() {
   if (messageState.phrase) {
     return getLabel(wordLabels, messageState.phrase);
   }
 
-  if (messageState.subject && messageState.activity && messageState.complement) {
-    return buildSubjectActivityComplementSentence();
+  if (!messageState.subject) {
+    return "";
   }
 
-  if (messageState.subject && messageState.complementType === "Sentimientos") {
-    return buildSubjectFeelingSentence();
-  }
-
-  if (messageState.subject && messageState.complement) {
-    return buildSimpleSubjectComplementSentence();
-  }
-
-  if (messageState.subject && messageState.activity) {
-    return buildSubjectActivitySentence();
-  }
-
-  if (messageState.subject) {
-    return getLabel(wordLabels, messageState.subject);
-  }
-
-  return "";
-}
-
-// Construye sujeto + actividad + complemento.
-// Español (SVO): "Yo quiero jugar en casa". Euskera (SOV): "Ni etxean jolastu nahi dut"
-// (el complemento/lugar precede al verbo de actividad, que a su vez precede al auxiliar).
-function buildSubjectActivityComplementSentence() {
   const subject = messageState.subject;
   const grammar = subjectDataByLang[currentLang][subject] || subjectDataByLang[currentLang].Yo;
   const subjectLabel = getLabel(wordLabels, subject);
-  const activity = getLabel(wordLabels, messageState.activity).toLowerCase();
-  const complement = formatComplement(messageState.complement, messageState.complementType);
+  // Cada "predicado" es la frase sin el sujeto (verbo + complemento), para no
+  // repetir "Mamá... Mamá..." en cada tramo unido con "y".
+  const predicates = [];
 
-  if (currentLang === "eu") {
-    return `${subjectLabel} ${complement} ${activity} ${grammar.want}`.replace(/\s+/g, " ").trim();
-  }
-  return `${subjectLabel} ${grammar.want} ${activity} ${complement}`.replace(/\s+/g, " ").trim();
-}
+  // La actividad absorbe como mucho un complemento (lugar si lo hay, si no comida)
+  // para mantener frases naturales como "quiero jugar en casa" en un solo bloque.
+  let remainingPlace = messageState.place;
+  let remainingFood = messageState.food;
 
-// Construye sujeto + sentimiento.
-// Español: "Yo estoy contento". Euskera: "Ni pozik nago" (el adjetivo va antes del verbo).
-function buildSubjectFeelingSentence() {
-  const subject = messageState.subject;
-  const grammar = subjectDataByLang[currentLang][subject] || subjectDataByLang[currentLang].Yo;
-  const subjectLabel = getLabel(wordLabels, subject);
-  const feeling = sentimentByGenderLang[currentLang][messageState.complement];
-  const feelingText = feeling
-    ? feeling[grammar.gender]
-    : getLabel(wordLabels, messageState.complement).toLowerCase();
+  if (messageState.activity) {
+    const activityLabel = getLabel(wordLabels, messageState.activity).toLowerCase();
+    let complementText = "";
+    if (remainingPlace) {
+      complementText = formatPlacePhrase(remainingPlace);
+      remainingPlace = "";
+    } else if (remainingFood) {
+      complementText = formatFoodPhrase(remainingFood);
+      remainingFood = "";
+    }
 
-  if (currentLang === "eu") {
-    return `${subjectLabel} ${feelingText} ${grammar.be}`.replace(/\s+/g, " ").trim();
-  }
-  return `${subjectLabel} ${grammar.be} ${feelingText}`.replace(/\s+/g, " ").trim();
-}
-
-// Construye sujeto + complemento de forma simple, con el verbo adecuado según el tipo.
-function buildSimpleSubjectComplementSentence() {
-  const subject = messageState.subject;
-  const grammar = subjectDataByLang[currentLang][subject] || subjectDataByLang[currentLang].Yo;
-  const subjectLabel = getLabel(wordLabels, subject);
-  const complement = formatComplement(messageState.complement, messageState.complementType);
-
-  // Lugares -> "estoy/está en casa" ("etxean nago/dago"); Comida (y el resto) -> "quiero/quiere agua" ("ura nahi dut/du").
-  const verb = messageState.complementType === "Lugares" ? grammar.be : grammar.want;
-
-  if (currentLang === "eu") {
-    return `${subjectLabel} ${complement} ${verb}`.replace(/\s+/g, " ").trim();
-  }
-  return `${subjectLabel} ${verb} ${complement}`.replace(/\s+/g, " ").trim();
-}
-
-// Construye sujeto + actividad.
-function buildSubjectActivitySentence() {
-  const subject = messageState.subject;
-  const grammar = subjectDataByLang[currentLang][subject] || subjectDataByLang[currentLang].Yo;
-  const subjectLabel = getLabel(wordLabels, subject);
-  const activity = getLabel(wordLabels, messageState.activity).toLowerCase();
-
-  if (currentLang === "eu") {
-    return `${subjectLabel} ${activity} ${grammar.want}`.replace(/\s+/g, " ").trim();
-  }
-  return `${subjectLabel} ${grammar.want} ${activity}`.replace(/\s+/g, " ").trim();
-}
-
-// Formatea complementos de comida o lugar para que suenen mejor, en el idioma activo.
-function formatComplement(complement, complementType) {
-  if (complementType === "Lugares") {
-    const table = placePhrasesByLang[currentLang];
-    return (table && table[complement]) || getLabel(wordLabels, complement).toLowerCase();
+    if (currentLang === "eu") {
+      predicates.push(`${complementText} ${activityLabel} ${grammar.want}`.replace(/\s+/g, " ").trim());
+    } else {
+      predicates.push(`${grammar.want} ${activityLabel} ${complementText}`.replace(/\s+/g, " ").trim());
+    }
   }
 
-  return getLabel(wordLabels, complement).toLowerCase();
+  if (remainingFood) {
+    const foodText = formatFoodPhrase(remainingFood);
+    predicates.push(currentLang === "eu" ? `${foodText} ${grammar.want}` : `${grammar.want} ${foodText}`);
+  }
+
+  if (remainingPlace) {
+    const placeText = formatPlacePhrase(remainingPlace);
+    predicates.push(currentLang === "eu" ? `${placeText} ${grammar.be}` : `${grammar.be} ${placeText}`);
+  }
+
+  if (messageState.feeling) {
+    const feelingText = formatFeelingPhrase(messageState.feeling, grammar.gender || "m");
+    predicates.push(currentLang === "eu" ? `${feelingText} ${grammar.be}` : `${grammar.be} ${feelingText}`);
+  }
+
+  if (predicates.length === 0) {
+    return subjectLabel;
+  }
+
+  const joiner = currentLang === "eu" ? " eta " : " y ";
+  return `${subjectLabel} ${predicates.join(joiner)}`.replace(/\s+/g, " ").trim();
 }
 
 // Limpia el estado actual.
@@ -725,8 +757,9 @@ function resetMessageState() {
   messageState.phrase = "";
   messageState.subject = "";
   messageState.activity = "";
-  messageState.complement = "";
-  messageState.complementType = "";
+  messageState.food = "";
+  messageState.place = "";
+  messageState.feeling = "";
   messageState.selectedWords = [];
 }
 
